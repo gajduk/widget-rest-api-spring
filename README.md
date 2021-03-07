@@ -35,12 +35,12 @@ If you would like to query data in H2, go to http://localhost:8080/h2-console an
 The application starts at port 8080.
 
 ### Functionalities of API on widgets
+* **GET** - **/v1/widgets** -> Get widgets. Optional request parameters are **limit**, **x0**, **y0**, **x1**, **y0**. Limit should be between [1-500], **default limit = 10** 
+**[x0,y0]** & **[x1,y1]** represents the coordinates(two points) to filter which widgets are located in it.
+* **GET** - **/v1/widgets/{id}** -> Get a widget by id
 * **POST** - **/v1/widgets** -> Create a new widget. Mandatory fields: **xIndex**, **yIndex**, **height**, **weight**. Optional field: **zIndex**
 * **PUT** - **/v1/widgets/{id}** -> Update an existing widget. Mandatory fields: **xIndex**, **yIndex**, **height**, **weight**
 * **DELETE** - **/v1/widgets/{id}** -> Delete an existing widget
-* **GET** - **/v1/widgets/{id}** -> Get a widget by id
-* **GET** - **/v1/widgets** -> Get widgets. Optional request parameters are **limit**, **x0**, **y0**, **x1**, **y0**. Limit should be between [1-500], **default limit = 10** 
-**[x0,y0]** & **[x1,y1]** represents the coordinates(two points) to filter which widgets are located in it.
 
 ### Tests
 There are both unit test & integration tests written and can be find under **/test**
