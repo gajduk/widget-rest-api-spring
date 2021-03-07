@@ -7,15 +7,16 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
 
 /**
- * This is the request model of Widget creation,
+ * This is the request model for creating and updating widget,
  * All other fields besides zIndex need to be provided, otherwise the widget wouldn't be created.
  * Id will be auto-generated in DB.
  *
- * @author gajduk
  */
 @Data
 @Builder
-public class CreateWidgetRequest {
+public class WidgetRequest {
+    private Long id;
+
     @NotNull(message = "xIndex should be provided.")
     private Integer xIndex;
 
@@ -32,8 +33,9 @@ public class CreateWidgetRequest {
     @Positive(message = "height should be positive.")
     private Integer height;
 
-    public Widget toWidget() {
+    public Widget toWidget(Long id) {
         return Widget.builder()
+                .id(id)
                 .xIndex(xIndex)
                 .yIndex(yIndex)
                 .zIndex(zIndex)

@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS widget (
-    id UUID NOT NULL,
+    id bigint(10) NOT NULL AUTO_INCREMENT,
     xIndex INTEGER NOT NULL,
     yIndex INTEGER NOT NULL,
     zIndex INTEGER NOT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS widget (
     updateTime TIMESTAMP NOT NULL,
     PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX x_order
-ON widget (xIndex);
-CREATE UNIQUE INDEX z_order
+CREATE INDEX z_order
 ON widget (zIndex);
+CREATE INDEX x_order
+ON widget (xIndex);

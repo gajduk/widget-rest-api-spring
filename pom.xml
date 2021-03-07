@@ -11,8 +11,8 @@
 	<groupId>uk.gajd.andrej</groupId>
 	<artifactId>widgets</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>miro</name>
-	<description>Miro Assessment - Widgets which run on two DBs</description>
+	<name>Widget-API</name>
+	<description>Sample RESTful API for doing basic CRUD operations on widgets.</description>
 	<properties>
 		<java.version>11</java.version>
 	</properties>

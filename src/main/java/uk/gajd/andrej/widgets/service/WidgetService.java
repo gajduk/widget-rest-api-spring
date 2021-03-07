@@ -8,7 +8,6 @@ import java.util.List;
 /**
  * This is the service interface for widget related operations.
  *
- * @author gajduk
  */
 public interface WidgetService {
     /**
@@ -21,18 +20,18 @@ public interface WidgetService {
      * @param widget to update
      * @return updated widget
      */
-    Widget updateWidget(String id, Widget widget);
+    Widget updateWidget(Widget widget);
 
     /**
      * @param id of widget to delete
      */
-    void deleteWidget(String id);
+    void deleteWidget(Long id);
 
     /**
      * @param id of widget to find
      * @return found widget
      */
-    Widget findWidgetById(String id);
+    Widget findWidgetById(Long id);
 
     /**
      * @param limit for queried Widget entities

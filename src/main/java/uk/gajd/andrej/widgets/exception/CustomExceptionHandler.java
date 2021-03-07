@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
  * This is the custom exception handler where custom & predefined
  * exceptions are caught and appropriate responses are returned.
  *
- * @author gajduk
  */
 @ControllerAdvice
 public class CustomExceptionHandler {

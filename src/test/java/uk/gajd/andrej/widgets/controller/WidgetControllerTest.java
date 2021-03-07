@@ -2,7 +2,7 @@ package uk.gajd.andrej.widgets.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gajd.andrej.widgets.exception.WidgetNotFoundException;
-import uk.gajd.andrej.widgets.model.CreateWidgetRequest;
+import uk.gajd.andrej.widgets.model.WidgetRequest;
 import uk.gajd.andrej.widgets.model.RectangleCoordinates;
 import uk.gajd.andrej.widgets.model.Widget;
 import uk.gajd.andrej.widgets.service.WidgetService;
@@ -15,7 +15,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
-import java.util.UUID;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.BDDMockito.given;
@@ -25,13 +24,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = WidgetController.class)
 class WidgetControllerTest {
+    private static final Long DUMMY_WIDGET_ID = 123L;
     private static final Integer DUMMY_VALID_LIMIT = 20;
     private static final List<Widget> DUMMY_WIDGET_LIST = List.of(
-            Widget.builder().id(UUID.randomUUID()).xIndex(0).yIndex(0).width(5).height(5).build(),
-            Widget.builder().id(UUID.randomUUID()).xIndex(2).yIndex(2).width(3).height(3).build(),
-            Widget.builder().id(UUID.randomUUID()).xIndex(3).yIndex(3).width(3).height(3).build()
+            Widget.builder().id(DUMMY_WIDGET_ID).xIndex(0).yIndex(0).width(5).height(5).build(),
+            Widget.builder().id(DUMMY_WIDGET_ID + 1).xIndex(0).yIndex(0).width(5).height(5).build()
     );
-    public static final String API_PATH = "/v1/widgets";
 
     @Autowired
     ObjectMapper objectMapper;
@@ -44,25 +42,24 @@ class WidgetControllerTest {
 
     @Test
     void create_whenBodyIsInvalid_thenReturnBadRequest() throws Exception {
-        mockMvc.perform(post(API_PATH))
+        mockMvc.perform(post("/v1/widgets"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void create_whenBodyIsValid_thenReturnReturnCreated() throws Exception {
-        CreateWidgetRequest request = CreateWidgetRequest.builder().xIndex(0).yIndex(0).width(5).height(5).build();
-        Widget createdWidget = request.toWidget();
-        UUID uuid = UUID.randomUUID();
-        createdWidget.setId(uuid);
+        WidgetRequest request = WidgetRequest.builder().xIndex(0).yIndex(0).width(5).height(5).build();
+        Widget createdWidget = request.toWidget(null);
+        createdWidget.setId(DUMMY_WIDGET_ID);
 
         //mock
-        given(widgetService.createWidget(request.toWidget())).willReturn(createdWidget);
+        given(widgetService.createWidget(request.toWidget(null))).willReturn(createdWidget);
 
-        mockMvc.perform(post(API_PATH)
+        mockMvc.perform(post("/v1/widgets")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id", is(createdWidget.getId().toString())))
+                .andExpect(jsonPath("$.id", is(createdWidget.getId().intValue())))
                 .andExpect(jsonPath("$.xIndex", is(createdWidget.getXIndex())))
                 .andExpect(jsonPath("$.yIndex", is(createdWidget.getYIndex())))
                 .andExpect(jsonPath("$.width", is(createdWidget.getWidth())))
@@ -71,70 +68,71 @@ class WidgetControllerTest {
 
     @Test
     void update_whenBodyIsInvalid_thenReturnBadRequest() throws Exception {
-        mockMvc.perform(put(API_PATH))
+        mockMvc.perform(put("/v1/widgets/{id}", DUMMY_WIDGET_ID))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
+    void update_whenIdNotProvided_thenReturnBadRequest() throws Exception {
+        WidgetRequest request = WidgetRequest.builder().xIndex(0).yIndex(0).width(5).height(5).build();
+
+        mockMvc.perform(put("/v1/widgets")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
     void update_whenBodyIsValid_thenReturnReturnOk() throws Exception {
-        CreateWidgetRequest request = CreateWidgetRequest.builder().xIndex(0).yIndex(0).width(5).height(5).build();
+        WidgetRequest request = WidgetRequest.builder().xIndex(0).yIndex(0).width(5).height(5).build();
 
-        String uuid = UUID.randomUUID().toString();
         //mock
-        given(widgetService.updateWidget(uuid, request.toWidget())).willReturn(request.toWidget());
+        given(widgetService.updateWidget(request.toWidget(DUMMY_WIDGET_ID))).willReturn(request.toWidget(DUMMY_WIDGET_ID));
 
-        mockMvc.perform(put(API_PATH)
+        mockMvc.perform(put("/v1/widgets/{id}", DUMMY_WIDGET_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(uuid)));
+                .andExpect(jsonPath("$.id", is(DUMMY_WIDGET_ID.intValue())));
     }
 
     @Test
     void delete_whenIdNotFound_thenReturnNotFound() throws Exception {
-        String uuid = UUID.randomUUID().toString();
-
         //mock
-        Mockito.doThrow(new WidgetNotFoundException("Widget not found by id")).when(widgetService).deleteWidget(uuid);
+        Mockito.doThrow(new WidgetNotFoundException("Widget not found by id")).when(widgetService).deleteWidget(DUMMY_WIDGET_ID);
 
-        mockMvc.perform(delete("/v1/widgets/{id}", uuid))
+        mockMvc.perform(delete("/v1/widgets/{id}", DUMMY_WIDGET_ID))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void delete_whenIdExists_thenReturnOk() throws Exception {
-        String uuid = UUID.randomUUID().toString();
-
         //mock
-        doNothing().when(widgetService).deleteWidget(uuid);
+        doNothing().when(widgetService).deleteWidget(DUMMY_WIDGET_ID);
 
-        mockMvc.perform(delete("/v1/widgets/{id}", uuid))
+        mockMvc.perform(delete("/v1/widgets/{id}", DUMMY_WIDGET_ID))
                 .andExpect(status().isOk());
     }
 
     @Test
     void findById_whenIdNotFound_thenReturnNotFound() throws Exception {
-        String uuid = UUID.randomUUID().toString();
-
         //mock
-        doThrow(new WidgetNotFoundException("Widget not found by id")).when(widgetService).findWidgetById(uuid);
+        doThrow(new WidgetNotFoundException("Widget not found by id")).when(widgetService).findWidgetById(DUMMY_WIDGET_ID);
 
-        mockMvc.perform(get("/v1/widgets/{id}", uuid))
+        mockMvc.perform(get("/v1/widgets/{id}", DUMMY_WIDGET_ID))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void findById_whenIdExists_thenReturnWidget() throws Exception {
-        UUID uuid = UUID.randomUUID();
-
-        Widget foundWidget = Widget.builder().id(uuid).xIndex(0).yIndex(0).width(5).height(5).build();
+        Widget foundWidget = Widget.builder().id(DUMMY_WIDGET_ID).xIndex(0).yIndex(0).width(5).height(5).build();
 
         //mock
-        given(widgetService.findWidgetById(uuid.toString())).willReturn(foundWidget);
+        given(widgetService.findWidgetById(foundWidget.getId())).willReturn(foundWidget);
 
-        mockMvc.perform(get("/v1/widgets/{id}", uuid.toString()))
+        mockMvc.perform(get("/v1/widgets/{id}", DUMMY_WIDGET_ID))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(uuid.toString())));
+                .andExpect(jsonPath("$.id", is(foundWidget.getId().intValue())));
     }
 
     @Test
@@ -163,26 +161,26 @@ class WidgetControllerTest {
 
     @Test
     void findAll_whenCoordinatesAreNotValid_thenReturnBadRequest() throws Exception {
-        RectangleCoordinates coordinates = RectangleCoordinates.builder().x1(2).y1(2).x2(1).y2(4).build();
+        RectangleCoordinates coordinates = RectangleCoordinates.builder().x0(2).y0(2).x1(1).y1(4).build();
 
         //mock
         given(widgetService.findWithCoordinates(coordinates, DUMMY_VALID_LIMIT)).willReturn(DUMMY_WIDGET_LIST);
 
-        String path = "/v1/widgets?x1=" + coordinates.getX1() + "&y1=" + coordinates.getY1()
-                + "&x2=" + coordinates.getX2() + "&y2=" + coordinates.getY2();
+        String path = "/v1/widgets?x0=" + coordinates.getX0() + "&y0=" + coordinates.getY0()
+                + "&x1=" + coordinates.getX1() + "&y1=" + coordinates.getY1();
         mockMvc.perform(get(path + "&limit=20"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void findAll_whenCoordinatesAreValid_thenReturnWidgets() throws Exception {
-        RectangleCoordinates coordinates = RectangleCoordinates.builder().x1(1).y1(2).x2(3).y2(4).build();
+        RectangleCoordinates coordinates = RectangleCoordinates.builder().x0(1).y0(2).x1(3).y1(4).build();
 
         //mock
         given(widgetService.findWithCoordinates(coordinates, DUMMY_VALID_LIMIT)).willReturn(DUMMY_WIDGET_LIST);
 
-        String path = "/v1/widgets?x1=" + coordinates.getX1() + "&y1=" + coordinates.getY1()
-                + "&x2=" + coordinates.getX2() + "&y2=" + coordinates.getY2();
+        String path = "/v1/widgets?x0=" + coordinates.getX0() + "&y0=" + coordinates.getY0()
+                + "&x1=" + coordinates.getX1() + "&y1=" + coordinates.getY1();
         mockMvc.perform(get(path + "&limit=20"))
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(DUMMY_WIDGET_LIST)));

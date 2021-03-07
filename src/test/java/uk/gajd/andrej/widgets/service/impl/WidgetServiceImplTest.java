@@ -11,7 +11,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
@@ -20,8 +19,7 @@ import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class WidgetServiceImplTest {
-    private static final UUID uuid = UUID.randomUUID();
-    private static final Widget DUMMY_WIDGET = Widget.builder().id(uuid).xIndex(0).yIndex(0).width(5).height(5).build();
+    private static final Widget DUMMY_WIDGET = Widget.builder().id(1L).xIndex(0).yIndex(0).width(5).height(5).build();
     private static final Widget DUMMY_WIDGET_WITHOUT_ID = Widget.builder().xIndex(0).yIndex(0).width(5).height(5).build();
     private static final Integer DUMMY_VALID_LIMIT = 20;
 
@@ -34,43 +32,43 @@ class WidgetServiceImplTest {
     @Test
     void createWidget_whenWidgetIsValid_thenReturnCreatedWidget() {
         //mock
-        given(mockWidgetRepository.save(null, DUMMY_WIDGET_WITHOUT_ID)).willReturn(DUMMY_WIDGET);
+        given(mockWidgetRepository.save(DUMMY_WIDGET_WITHOUT_ID)).willReturn(DUMMY_WIDGET);
 
         Widget createdWidget = widgetService.createWidget(DUMMY_WIDGET_WITHOUT_ID);
 
-        verify(mockWidgetRepository).save(null, DUMMY_WIDGET_WITHOUT_ID);
+        verify(mockWidgetRepository).save(DUMMY_WIDGET_WITHOUT_ID);
         assertEquals(createdWidget, DUMMY_WIDGET);
     }
 
     @Test
     void updateWidget_whenWidgetIsValid_thenReturnUpdatedWidget() {
         //mock
-        given(mockWidgetRepository.save(uuid.toString(), DUMMY_WIDGET)).willReturn(DUMMY_WIDGET);
+        given(mockWidgetRepository.save(DUMMY_WIDGET)).willReturn(DUMMY_WIDGET);
 
-        Widget updatedWidget = widgetService.updateWidget(uuid.toString(), DUMMY_WIDGET);
+        Widget updatedWidget = widgetService.updateWidget(DUMMY_WIDGET);
 
-        verify(mockWidgetRepository).save(uuid.toString(), DUMMY_WIDGET);
+        verify(mockWidgetRepository).save(DUMMY_WIDGET);
         assertEquals(updatedWidget, DUMMY_WIDGET);
     }
 
     @Test
     void deleteWidget_whenWidgetIdProvided_thenDeleteWidget() {
         //mock
-        doNothing().when(mockWidgetRepository).deleteById(uuid.toString());
+        doNothing().when(mockWidgetRepository).deleteById(DUMMY_WIDGET.getId());
 
-        widgetService.deleteWidget(uuid.toString());
+        widgetService.deleteWidget(DUMMY_WIDGET.getId());
 
-        verify(mockWidgetRepository).deleteById(uuid.toString());
+        verify(mockWidgetRepository).deleteById(DUMMY_WIDGET.getId());
     }
 
     @Test
     void findByWidgetId_whenWidgetIdIsProvided_thenReturnWidget() {
         //mock
-        given(mockWidgetRepository.findById(uuid.toString())).willReturn(DUMMY_WIDGET);
+        given(mockWidgetRepository.findById(DUMMY_WIDGET.getId())).willReturn(DUMMY_WIDGET);
 
-        Widget foundWidget = widgetService.findWidgetById(uuid.toString());
+        Widget foundWidget = widgetService.findWidgetById(DUMMY_WIDGET.getId());
 
-        verify(mockWidgetRepository).findById(uuid.toString());
+        verify(mockWidgetRepository).findById(DUMMY_WIDGET.getId());
         assertEquals(foundWidget, DUMMY_WIDGET);
     }
 
@@ -87,7 +85,7 @@ class WidgetServiceImplTest {
 
     @Test
     void findWithLimit_whenCoordinatesAreProvided_thenReturnWidgets() {
-        RectangleCoordinates coordinates = RectangleCoordinates.builder().x1(1).y1(2).x2(3).y2(4).build();
+        RectangleCoordinates coordinates = RectangleCoordinates.builder().x0(1).y0(2).x1(3).y1(4).build();
 
         //mock
         given(mockWidgetRepository.findWithCoordinates(coordinates, DUMMY_VALID_LIMIT)).willReturn(Collections.singletonList(DUMMY_WIDGET));

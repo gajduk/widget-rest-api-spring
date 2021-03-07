@@ -17,7 +17,6 @@ import java.util.List;
  * Since we have multiple repository implementations and they have their specific operations required,
  * most of the logic resides in repository implementations {@link InMemoryRepository} & {@link H2WidgetRepository}
  *
- * @author gajduk
  */
 @Service
 @RequiredArgsConstructor
@@ -27,26 +26,26 @@ public class WidgetServiceImpl implements WidgetService {
 
     @Override
     public Widget createWidget(Widget widget) {
-        Widget createdWidget = widgetRepository.save(null, widget);
+        Widget createdWidget = widgetRepository.save(widget);
         log.info("Created widget with id: {}", createdWidget.getId());
         return createdWidget;
     }
 
     @Override
-    public Widget updateWidget(String uuid, Widget widget) {
-        Widget updatedWidget = widgetRepository.save(uuid, widget);
-        log.info("Updated widget with id: {}", uuid);
+    public Widget updateWidget(Widget widget) {
+        Widget updatedWidget = widgetRepository.save(widget);
+        log.info("Updated widget with id: {}", updatedWidget.getId());
         return updatedWidget;
     }
 
     @Override
-    public void deleteWidget(String id) {
+    public void deleteWidget(Long id) {
         widgetRepository.deleteById(id);
         log.info("Deleted widget with id: {}", id);
     }
 
     @Override
-    public Widget findWidgetById(String id) {
+    public Widget findWidgetById(Long id) {
         Widget foundWidget = widgetRepository.findById(id);
         log.info("Found widget by id: {}", id);
         return foundWidget;

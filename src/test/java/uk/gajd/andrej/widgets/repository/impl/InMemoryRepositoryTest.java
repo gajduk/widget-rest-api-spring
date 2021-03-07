@@ -3,7 +3,6 @@ package uk.gajd.andrej.widgets.repository.impl;
 import uk.gajd.andrej.widgets.exception.WidgetNotFoundException;
 import uk.gajd.andrej.widgets.model.RectangleCoordinates;
 import uk.gajd.andrej.widgets.model.Widget;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -94,7 +93,7 @@ class InMemoryRepositoryTest {
         inMemoryRepository.save(widget);
         Long widgetId = widget.getId();
 
-        Assertions.assertEquals(widget, inMemoryRepository.findById(widgetId));
+        assertEquals(widget, inMemoryRepository.findById(widgetId));
     }
 
     @Test
@@ -110,17 +109,19 @@ class InMemoryRepositoryTest {
 
     @Test
     void findWithCoordinates_whenWidgetsExist_thenReturnFoundWidgets() {
-        Widget widget1 = Widget.builder().xIndex(50).yIndex(50).width(30).height(40).build();
-        Widget widget2 = Widget.builder().xIndex(50).yIndex(100).width(30).height(40).build();
+        Widget widget1 = Widget.builder().xIndex(50).yIndex(100).width(50).height(50).build();
+        Widget widget2 = Widget.builder().xIndex(0).yIndex(0).width(30).height(40).build();
         Widget widget3 = Widget.builder().xIndex(100).yIndex(100).width(30).height(40).build();
-        List.of(widget1, widget2, widget3).forEach(widget -> inMemoryRepository.save(widget));
+        Widget widget4 = Widget.builder().xIndex(20).yIndex(20).width(80).height(180).build();
+        List.of(widget1, widget2, widget3, widget4).forEach(widget -> inMemoryRepository.save(widget));
 
-        RectangleCoordinates coordinates = RectangleCoordinates.builder().x1(0).y1(0).x2(100).y2(150).build();
+        RectangleCoordinates coordinates = RectangleCoordinates.builder().x0(0).y0(0).x1(100).y1(150).build();
 
         List<Widget> foundWidgets = inMemoryRepository.findWithCoordinates(coordinates, 10);
         assertEquals(2, foundWidgets.size());
         assertTrue(foundWidgets.contains(widget1));
         assertTrue(foundWidgets.contains(widget2));
         assertFalse(foundWidgets.contains(widget3));
+        assertFalse(foundWidgets.contains(widget4));
     }
 }

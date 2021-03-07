@@ -3,7 +3,6 @@ package uk.gajd.andrej.widgets.repository.impl;
 import uk.gajd.andrej.widgets.exception.WidgetNotFoundException;
 import uk.gajd.andrej.widgets.model.RectangleCoordinates;
 import uk.gajd.andrej.widgets.model.Widget;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,8 +20,9 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
+import static uk.gajd.andrej.widgets.repository.impl.H2WidgetRepository.QUERY_DELETE_WIDGET;
+import static uk.gajd.andrej.widgets.repository.impl.H2WidgetRepository.QUERY_SELECT_MAX_Z_INDEX;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
@@ -38,6 +38,18 @@ class H2WidgetRepositoryTest {
     private H2WidgetRepository h2WidgetRepository;
 
     @Test
+    void save_whenIdDoesNotExist_thenCreateAndReturnNewWidget() {
+        Widget widget = Widget.builder().xIndex(10).yIndex(20).width(30).height(40).build();
+
+        // mock
+        mockWidgetId(3L);
+        given(mockJdbcTemplate.queryForObject(QUERY_SELECT_MAX_Z_INDEX, Integer.class)).willReturn(null);
+
+        Widget createdWidget = h2WidgetRepository.save(widget);
+        assertEquals(3L, createdWidget.getId());
+    }
+
+    @Test
     void save_whenZIndexConflicts_thenShiftAndReturnWidget() {
         Widget widget = Widget.builder().xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build();
         Widget existingWidget = Widget.builder().xIndex(1).yIndex(2).zIndex(5).width(3).height(4).build();
@@ -45,85 +57,81 @@ class H2WidgetRepositoryTest {
         // mock
         given(mockJdbcTemplate.queryForObject(anyString(), any(BeanPropertyRowMapper.class), anyInt())).willReturn(existingWidget, existingWidget, null);
 
-        Widget createdWidget = h2WidgetRepository.save(null, widget);
+        Widget createdWidget = h2WidgetRepository.save(widget);
         assertEquals(widget.getZIndex(), createdWidget.getZIndex());
     }
 
     @Test
     void save_whenIdExistsButNoWidgetFound_thenThrowWidgetNotFoundException() {
-        UUID uuid = UUID.randomUUID();
-        Widget widget = Widget.builder().id(uuid).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build();
+        Widget widget = Widget.builder().id(1L).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build();
 
         // mock
         given(mockJdbcTemplate.queryForObject(anyString(), any(BeanPropertyRowMapper.class), anyInt())).willReturn(null);
-        given(mockJdbcTemplate.update(anyString(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), any(LocalDateTime.class), anyString())).willReturn(0);
+        given(mockJdbcTemplate.update(anyString(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), any(LocalDateTime.class), anyLong())).willReturn(0);
 
-        assertThrows(WidgetNotFoundException.class, () -> h2WidgetRepository.save(uuid.toString(), widget));
+        assertThrows(WidgetNotFoundException.class, () -> h2WidgetRepository.save(widget));
     }
 
     @Test
     void save_whenIdExistsAndWidgetFound_thenUpdateAndReturnUpdatedWidget() {
-        UUID uuid = UUID.randomUUID();
-        Widget widget = Widget.builder().id(uuid).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build();
+        Widget widget = Widget.builder().id(1L).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build();
 
         // mock
         given(mockJdbcTemplate.queryForObject(anyString(), any(BeanPropertyRowMapper.class), anyInt())).willReturn(null);
-        given(mockJdbcTemplate.update(anyString(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), any(LocalDateTime.class), anyString())).willReturn(1);
+        given(mockJdbcTemplate.update(anyString(), anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), any(LocalDateTime.class), anyLong())).willReturn(1);
 
-        Widget updatedWidget = h2WidgetRepository.save(uuid.toString(), widget);
+        Widget updatedWidget = h2WidgetRepository.save(widget);
         assertEquals(widget.getId(), updatedWidget.getId());
         assertNotNull(updatedWidget.getUpdateTime());
     }
 
     @Test
     void deleteById_whenIdDoesntExist_thenThrowWidgetNotFoundException() {
-        UUID uuid = UUID.randomUUID();
+        Long widgetId = 5L;
 
         // mock
-        given(mockJdbcTemplate.update(H2WidgetRepository.QUERY_DELETE_WIDGET, uuid.toString())).willReturn(0);
+        given(mockJdbcTemplate.update(QUERY_DELETE_WIDGET, widgetId)).willReturn(0);
 
-        assertThrows(WidgetNotFoundException.class, () -> h2WidgetRepository.deleteById(uuid.toString()));
+        assertThrows(WidgetNotFoundException.class, () -> h2WidgetRepository.deleteById(widgetId));
     }
 
     @Test
     void deleteById_whenIdExists_thenDeleteWidget() {
-        UUID uuid = UUID.randomUUID();
+        Long widgetId = 5L;
 
         // mock
-        given(mockJdbcTemplate.update(H2WidgetRepository.QUERY_DELETE_WIDGET, uuid.toString())).willReturn(1);
+        given(mockJdbcTemplate.update(QUERY_DELETE_WIDGET, widgetId)).willReturn(1);
 
-        h2WidgetRepository.deleteById(uuid.toString());
+        h2WidgetRepository.deleteById(widgetId);
 
-        verify(mockJdbcTemplate).update(H2WidgetRepository.QUERY_DELETE_WIDGET, uuid.toString());
+        verify(mockJdbcTemplate).update(QUERY_DELETE_WIDGET, widgetId);
     }
 
     @Test
     void findById_whenIdDoesntExist_thenThrowWidgetNotFoundException() {
-        UUID uuid = UUID.randomUUID();
+        Long widgetId = 5L;
 
         // mock
-        doThrow(EmptyResultDataAccessException.class).when(mockJdbcTemplate).queryForObject(anyString(), any(BeanPropertyRowMapper.class), anyString());
+        doThrow(EmptyResultDataAccessException.class).when(mockJdbcTemplate).queryForObject(anyString(), any(BeanPropertyRowMapper.class), anyLong());
 
-        assertThrows(WidgetNotFoundException.class, () -> h2WidgetRepository.findById(uuid.toString()));
+        assertThrows(WidgetNotFoundException.class, () -> h2WidgetRepository.findById(widgetId));
     }
 
     @Test
     void findById_whenIdExists_thenReturnFoundWidget() {
-        UUID uuid = UUID.randomUUID();
-
-        Widget widget = Widget.builder().id(uuid).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build();
+        Widget widget = Widget.builder().id(1L).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build();
 
         // mock
         given(mockJdbcTemplate.queryForObject(anyString(), any(BeanPropertyRowMapper.class), anyLong())).willReturn(widget);
 
-        Assertions.assertEquals(widget, h2WidgetRepository.findById(uuid.toString()));
+        assertEquals(widget, h2WidgetRepository.findById(widget.getId()));
     }
 
     @Test
     void findWithLimit_whenWidgetsExist_thenReturnFoundWidgets() {
         List<Widget> widgets = List.of(
-                Widget.builder().id(UUID.randomUUID()).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build(),
-                Widget.builder().id(UUID.randomUUID()).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build()
+                Widget.builder().id(1L).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build(),
+                Widget.builder().id(2L).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build()
         );
 
         // mock
@@ -134,14 +142,14 @@ class H2WidgetRepositoryTest {
 
     @Test
     void findWithCoordinates_whenWidgetsExist_thenReturnFoundWidgets() {
-        RectangleCoordinates coordinates = RectangleCoordinates.builder().x1(1).y1(2).x2(3).y2(4).build();
+        RectangleCoordinates coordinates = RectangleCoordinates.builder().x0(1).y0(2).x1(3).y1(4).build();
         List<Widget> widgets = List.of(
-                Widget.builder().id(UUID.randomUUID()).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build(),
-                Widget.builder().id(UUID.randomUUID()).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build()
+                Widget.builder().id(1L).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build(),
+                Widget.builder().id(2L).xIndex(10).yIndex(20).zIndex(5).width(30).height(40).build()
         );
 
         // mock
-        given(mockJdbcTemplate.query(anyString(), any(RowMapper.class), anyInt(), anyInt())).willReturn(widgets);
+        given(mockJdbcTemplate.query(anyString(), any(RowMapper.class), anyInt(), anyInt(), anyInt(), anyInt(), anyInt())).willReturn(widgets);
 
         assertEquals(widgets, h2WidgetRepository.findWithCoordinates(coordinates, 10));
     }

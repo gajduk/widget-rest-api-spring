@@ -22,13 +22,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * This is the repository implementation to use H2 in-memory DB as datasource for operations.
  *
- * @author gajduk
  */
 @Repository
 @Profile("h2")
@@ -37,21 +34,22 @@ public class H2WidgetRepository implements WidgetRepository {
     static final String QUERY_SELECT_MAX_Z_INDEX = "select max(zIndex) from widget";
     static final String QUERY_DELETE_WIDGET = "delete from widget where id=?";
     private static final String QUERY_SELECT_BY_Z_INDEX = "select * from widget where zIndex=?";
-    private static final String QUERY_INSERT_WIDGET = "insert into widget (id, xIndex, yIndex, zIndex, width, height, updateTime) values(?,?,?,?,?,?,?)";
+    private static final String QUERY_INSERT_WIDGET = "insert into widget (xIndex, yIndex, zIndex, width, height, updateTime) values(?,?,?,?,?,?)";
     private static final int QUERY_RESULT_SUCCESS = 1;
     private static final String QUERY_UPDATE_Z_INDEXES = "update widget set zIndex = zIndex + 1 where id=?";
     private static final String QUERY_UPDATE_WIDGET = "update widget set xIndex=?, yIndex=?, zIndex=?, width=?, height=?, updateTime=? where id = ?";
     private static final String QUERY_SELECT_BY_ID = "select * from widget where id=?";
     private static final String QUERY_SELECT_BY_LIMIT = "select * from widget order by zIndex limit ?";
     private static final String QUERY_SELECT_BY_COORDINATE_AND_LIMIT = "select * from widget " +
-            "where xIndex >= ? and xIndex <= ?" +
+            "where xIndex >= ? and xIndex + width <= ?" +
+            "and yIndex >= ? and yIndex + height <= ?" +
             "order by zIndex limit ?";
 
     private final JdbcTemplate jdbcTemplate;
 
     @Override
     @Transactional
-    public Widget save(String id, Widget widget) {
+    public Widget save(Widget widget) {
         if (widget.getZIndex() != null && findByZIndex(widget.getZIndex()).isPresent()) { // Shifting required.
             shift(widget.getZIndex());
         }
@@ -60,18 +58,18 @@ public class H2WidgetRepository implements WidgetRepository {
             widget.setZIndex(getMaxZIndex() + 1);
         }
 
-        return id == null ? saveWidget(widget) : updateWidget(id, widget);
+        return widget.getId() == null ? saveWidget(widget) : updateWidget(widget);
     }
 
     @Override
-    public void deleteById(String id) {
+    public void deleteById(Long id) {
         if (jdbcTemplate.update(QUERY_DELETE_WIDGET, id) != QUERY_RESULT_SUCCESS) {
             throw new WidgetNotFoundException("Couldn't find widget to delete with id: " + id);
         }
     }
 
     @Override
-    public Widget findById(String id) {
+    public Widget findById(Long id) {
         try {
             return jdbcTemplate.queryForObject(QUERY_SELECT_BY_ID, new BeanPropertyRowMapper<>(Widget.class), id);
         } catch (EmptyResultDataAccessException e) {
@@ -89,17 +87,15 @@ public class H2WidgetRepository implements WidgetRepository {
     public List<Widget> findWithCoordinates(RectangleCoordinates coordinates, Integer limit) {
         return jdbcTemplate.query(QUERY_SELECT_BY_COORDINATE_AND_LIMIT,
                 Widget::mapRowToWidget,
+                coordinates.getX0(),
                 coordinates.getX1(),
-                coordinates.getX2())
-                .stream()
-                .filter(widget -> isInRectangle(widget, coordinates))
-                .sorted((w1, w2) -> w1.getZIndex()-w2.getZIndex())
-                .limit(limit)
-                .collect(Collectors.toList());
+                coordinates.getY0(),
+                coordinates.getY1(),
+                limit);
     }
 
     private void shift(Integer zIndex) {
-        List<UUID> widgetIdsToShift = new ArrayList<>();
+        List<Long> widgetIdsToShift = new ArrayList<>();
         boolean widgetExistsAtZIndex = true;
 
         while (widgetExistsAtZIndex) {
@@ -118,22 +114,25 @@ public class H2WidgetRepository implements WidgetRepository {
     private Widget saveWidget(Widget widget) {
         widget.setUpdateTime(LocalDateTime.now());
 
+        KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
-            PreparedStatement ps = connection.prepareStatement(QUERY_INSERT_WIDGET);
-            ps.setString(1, UUID.randomUUID().toString());
-            ps.setInt(2, widget.getXIndex());
-            ps.setInt(3, widget.getYIndex());
-            ps.setInt(4, widget.getZIndex());
-            ps.setInt(5, widget.getWidth());
-            ps.setInt(6, widget.getHeight());
+            PreparedStatement ps = connection.prepareStatement(QUERY_INSERT_WIDGET, new String[]{"id"});
+            ps.setInt(1, widget.getXIndex());
+            ps.setInt(2, widget.getYIndex());
+            ps.setInt(3, widget.getZIndex());
+            ps.setInt(4, widget.getWidth());
+            ps.setInt(5, widget.getHeight());
             ps.setTimestamp(6, Timestamp.valueOf(widget.getUpdateTime()));
             return ps;
-        });
+        }, keyHolder);
 
+        if (keyHolder.getKey() != null) {
+            widget.setId(keyHolder.getKey().longValue());
+        }
         return widget;
     }
 
-    private Widget updateWidget(String id, Widget widget) {
+    private Widget updateWidget(Widget widget) {
         widget.setUpdateTime(LocalDateTime.now());
         int updateResult = jdbcTemplate.update(QUERY_UPDATE_WIDGET,
                 widget.getXIndex(),
@@ -142,7 +141,7 @@ public class H2WidgetRepository implements WidgetRepository {
                 widget.getWidth(),
                 widget.getHeight(),
                 widget.getUpdateTime(),
-                id);
+                widget.getId());
         if (updateResult != QUERY_RESULT_SUCCESS) {
             throw new WidgetNotFoundException("Couldn't find widget to update with id: " + widget.getId());
         }
@@ -163,10 +162,10 @@ public class H2WidgetRepository implements WidgetRepository {
         }
     }
 
-    private void updateZIndexes(List<UUID> widgetIds) {
+    private void updateZIndexes(List<Long> widgetIds) {
         jdbcTemplate.batchUpdate(QUERY_UPDATE_Z_INDEXES, new BatchPreparedStatementSetter() {
             public void setValues(PreparedStatement ps, int i) throws SQLException {
-                ps.setString(1, widgetIds.get(i).toString());
+                ps.setLong(1, widgetIds.get(i));
             }
 
             public int getBatchSize() {
