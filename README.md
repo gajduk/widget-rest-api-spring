@@ -1,7 +1,7 @@
 # Widget API
 
 ### Summary
-Sample RESTful API for doing basic CRUD operations on widgets.
+Sample RESTful API for doing basic CRUD operations on widgets.  
 Two different repository implementation exist in the service:
  * ConcurrentHashMap
  * H2
